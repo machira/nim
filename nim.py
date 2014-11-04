@@ -5,7 +5,7 @@ import itertools
 num_nodes_expanded = 0
 MIN_REMOVE = 1
 MAX_REMOVE = 3
-board_size = 2
+board_size = 1
 column_size = 8
 
 
@@ -30,9 +30,13 @@ def computer(board):
 def recommend_move(board, play_as_opponent):
     global num_nodes_expanded
     num_nodes_expanded += 1
-
+    if play_as_opponent:
+        best_score = 1, 0, 0
+    else:
+        best_score = 0, 0, 0
 
     if sum(board) > 0:
+        # best_score = (0,0,0)
         # for each col, and number of pieces pair
         for col, pcs in list(itertools.product(range(0, board_size), range(MAX_REMOVE, MIN_REMOVE - 1, -1))):
             # valid col, pcs pair?
@@ -44,17 +48,15 @@ def recommend_move(board, play_as_opponent):
             new_board[col] -= pcs
             # no need to explore further - a winning combo is found
 
-            score = recommend_move(new_board, not play_as_opponent)[0]
-
-            if play_as_opponent and score == 0: return 0, col, pcs
-
-            if not play_as_opponent and score == 1: return 1, col, pcs
+            score = (recommend_move(new_board, not play_as_opponent)[0],col,pcs)
+            if play_as_opponent:
+                best_score = min([best_score,score], key= lambda item: item[0])
+            else:
+                best_score = max([best_score,score], key= lambda item: item[0])
 
     # no winning move or lost game: no pieces to pick.
-    if play_as_opponent:
-        return 1, 0, 0
-    else:
-        return 0, 0, 0
+
+    return best_score
 
 
 def human(board):
