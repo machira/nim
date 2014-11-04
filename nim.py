@@ -6,12 +6,12 @@ num_nodes_expanded = 0
 MIN_REMOVE = 1
 MAX_REMOVE = 3
 board_size = 1
-column_size = 8
-
+column_size = 7
+use_ab = False
 
 def computer(board):
     '''Determine computer move.'''
-    score, rec_col, rec_mov = recommend_move(board, False)
+    score, rec_col, rec_mov = recommend_move_ab(board, False) if use_ab else recommend_move_min_max(board,False)
 
     if score > 0:
         column, pieces = rec_col, rec_mov
@@ -26,8 +26,37 @@ def computer(board):
 
     return column, pieces
 
+def recommend_move_ab(board, play_as_opponent):
+    global num_nodes_expanded
+    num_nodes_expanded += 1
 
-def recommend_move(board, play_as_opponent):
+
+    if sum(board) > 0:
+        # for each col, and number of pieces pair
+        for col, pcs in list(itertools.product(range(0, board_size), range(MAX_REMOVE, MIN_REMOVE - 1, -1))):
+            # valid col, pcs pair?
+            if board[col] < pcs:
+                continue
+
+            # new mutable copy of board
+            new_board = board[:]
+            new_board[col] -= pcs
+            # no need to explore further - a winning combo is found
+
+            score = recommend_move_ab(new_board, not play_as_opponent)[0]
+
+            if play_as_opponent and score == 0: return 0, col, pcs
+
+            if not play_as_opponent and score == 1: return 1, col, pcs
+
+    # no winning move or lost game: no pieces to pick.
+    if play_as_opponent:
+        return 1, 0, 0
+    else:
+        return 0, 0, 0
+
+
+def recommend_move_min_max(board, play_as_opponent):
     global num_nodes_expanded
     num_nodes_expanded += 1
     if play_as_opponent:
@@ -48,7 +77,7 @@ def recommend_move(board, play_as_opponent):
             new_board[col] -= pcs
             # no need to explore further - a winning combo is found
 
-            score = (recommend_move(new_board, not play_as_opponent)[0],col,pcs)
+            score = (recommend_move_min_max(new_board, not play_as_opponent)[0],col,pcs)
             if play_as_opponent:
                 best_score = min([best_score,score], key= lambda item: item[0])
             else:
@@ -101,11 +130,14 @@ def nim():
     '''Play nim.'''
 
     # initialize random board for each column
-    board = [randint(0,column_size) for n in range(board_size)]
+    board = [column_size for n in range(board_size)]
 
     show_board(board)
 
     player, comp_start = (human, False) if random() > 0.5 else (computer, True)
+
+    # with open('results.csv', 'a') as results:
+    #     results.write('Nodes Expanded,Number of Sticks, Did Computer Start, Using ABPruning')
 
     while True:
         column, pieces = player(board)
@@ -123,8 +155,8 @@ def nim():
     sleep(0.5)
     show_text("\n\nBye.")
 
-    with open('results.csv', 'wa') as results:
-        results.write('{0},{1},{2}'.format(num_nodes_expanded, column_size, comp_start))
+    with open('results.csv', 'a') as results:
+        results.write('{0},{1},{2},{3} \n'.format(num_nodes_expanded, column_size, comp_start, use_ab))
 
 
 if __name__ == '__main__':
